@@ -21,31 +21,33 @@ class Base(models.AbstractModel):
         if can_archive and can_unarchive:
             return res
             
-        if 'views' in res and 'form' in res['views']:
-            arch = res['views']['form'].get('arch')
-            if arch:
-                doc = etree.fromstring(arch)
-                # Look for both the toggle_active button and the active field itself
-                elements = doc.xpath("//button[@name='toggle_active']") + \
-                           doc.xpath(f"//field[@name='{active_name}']")
-                for elem in elements:
-                    invisible_attr = ""
-                    if not can_archive and not can_unarchive:
-                        invisible_attr = "True"
-                    elif can_archive and not can_unarchive:
-                        # Can archive: hide if record is already archived (active=False)
-                        invisible_attr = f"not {active_name}"
-                    elif not can_archive and can_unarchive:
-                        # Can unarchive: hide if record is already active (active=True)
-                        invisible_attr = active_name
-                        
-                    if invisible_attr:
-                        existing = elem.get("invisible")
-                        if existing:
-                            elem.set("invisible", f"({existing}) or ({invisible_attr})")
-                        else:
-                            elem.set("invisible", invisible_attr)
-                            
-                res['views']['form']['arch'] = etree.tostring(doc, encoding='unicode')
+        if 'views' in res:
+            for view_type in ['form', 'list', 'tree']:
+                if view_type in res['views']:
+                    arch = res['views'][view_type].get('arch')
+                    if arch:
+                        doc = etree.fromstring(arch)
+                        # Look for both the toggle_active button and the active field itself
+                        elements = doc.xpath("//button[@name='toggle_active']") + \
+                                   doc.xpath(f"//field[@name='{active_name}']")
+                        for elem in elements:
+                            invisible_attr = ""
+                            if not can_archive and not can_unarchive:
+                                invisible_attr = "True"
+                            elif can_archive and not can_unarchive:
+                                # Can archive: hide if record is already archived (active=False)
+                                invisible_attr = f"not {active_name}"
+                            elif not can_archive and can_unarchive:
+                                # Can unarchive: hide if record is already active (active=True)
+                                invisible_attr = active_name
+                                
+                            if invisible_attr:
+                                existing = elem.get("invisible")
+                                if existing:
+                                    elem.set("invisible", f"({existing}) or ({invisible_attr})")
+                                else:
+                                    elem.set("invisible", invisible_attr)
+                                    
+                        res['views'][view_type]['arch'] = etree.tostring(doc, encoding='unicode')
                 
         return res
