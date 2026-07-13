@@ -2,7 +2,6 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 from odoo import _, api, fields, models, tools
-from odoo.exceptions import AccessError
 from odoo.tools import SQL
 
 
@@ -35,15 +34,6 @@ class IrModelAccess(models.Model):
         """, SQL(mode), tuple(group_ids) or (None,)))
 
         return frozenset(v[0] for v in rows)
-
-    @api.model
-    @tools.ormcache("self.env.uid", "model", "mode")
-    def check(self, model, mode="read", raise_exception=True):
-        """Extend to enforce archive/unarchive access rights."""
-        if mode not in ("archive", "unarchive"):
-            return super().check(model, mode=mode, raise_exception=raise_exception)
-        has_access = model in self._get_allowed_models(mode)
-        return has_access
 
     @api.model
     def get_archive_access(self, model):

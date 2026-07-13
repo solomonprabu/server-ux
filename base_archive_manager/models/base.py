@@ -22,7 +22,7 @@ class Base(models.AbstractModel):
             return res
             
         if 'views' in res:
-            for view_type in ['form', 'list', 'tree']:
+            for view_type in ['form', 'list']:
                 if view_type in res['views']:
                     arch = res['views'][view_type].get('arch')
                     if arch:
