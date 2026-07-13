@@ -13,31 +13,34 @@ export const getArchiveAccessPatch = () => ({
         super.setup(...arguments);
         this.hasArchiveAccess = false;
         this.hasUnarchiveAccess = false;
+        
         onWillStart(async () => {
-            const access = await archiveAccessCache.read(this.props.resModel);
-            this.hasArchiveAccess = access.can_archive;
-            this.hasUnarchiveAccess = access.can_unarchive;
+            // Only fetch access rights if the model supports archiving
+            const hasActiveField = "active" in this.props.fields || "x_active" in this.props.fields;
+            if (hasActiveField) {
+                const access = await archiveAccessCache.read(this.props.resModel);
+                this.hasArchiveAccess = access.can_archive;
+                this.hasUnarchiveAccess = access.can_unarchive;
+            }
         });
     },
 
     getStaticActionMenuItems() {
         const menuItems = super.getStaticActionMenuItems(...arguments);
         
-        if (menuItems.archive) {
-            const originalArchiveIsAvailable = menuItems.archive.isAvailable;
-            menuItems.archive.isAvailable = () => {
-                const isAvailable = originalArchiveIsAvailable ? originalArchiveIsAvailable() : true;
-                return isAvailable && this.hasArchiveAccess;
+        const applyAccessCheck = (menuItem, hasAccess) => {
+            if (!menuItem) return;
+            const originalIsAvailable = menuItem.isAvailable;
+            menuItem.isAvailable = () => {
+                const isAvailable = typeof originalIsAvailable === "function" 
+                    ? originalIsAvailable() 
+                    : (originalIsAvailable ?? true);
+                return isAvailable && hasAccess;
             };
-        }
-        
-        if (menuItems.unarchive) {
-            const originalUnarchiveIsAvailable = menuItems.unarchive.isAvailable;
-            menuItems.unarchive.isAvailable = () => {
-                const isAvailable = originalUnarchiveIsAvailable ? originalUnarchiveIsAvailable() : true;
-                return isAvailable && this.hasUnarchiveAccess;
-            };
-        }
+        };
+
+        applyAccessCheck(menuItems.archive, this.hasArchiveAccess);
+        applyAccessCheck(menuItems.unarchive, this.hasUnarchiveAccess);
 
         return menuItems;
     }
