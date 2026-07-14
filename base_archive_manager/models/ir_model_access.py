@@ -12,13 +12,8 @@ class IrModelAccess(models.Model):
     perm_unarchive = fields.Boolean("Unarchive Access", default=True)
 
     @api.model
-    @tools.ormcache("self.env.uid", "mode")
-    def _get_allowed_models(self, mode="read"):
-        """Extend to support archive/unarchive access modes."""
-        if mode not in ("archive", "unarchive"):
-            return super()._get_allowed_models(mode)
-
-        group_ids = self.env.user._get_group_ids()
+    def _get_archive_allowed_models_with_groups(self, mode, group_ids):
+        """Helper to evaluate archive access with specific groups."""
         self.flush_model()
         rows = self.env.execute_query(SQL("""
             SELECT m.model
@@ -32,8 +27,17 @@ class IrModelAccess(models.Model):
                 )
             GROUP BY m.model
         """, SQL(mode), tuple(group_ids) or (None,)))
-
         return frozenset(v[0] for v in rows)
+
+    @api.model
+    @tools.ormcache("self.env.uid", "mode")
+    def _get_allowed_models(self, mode="read"):
+        """Extend to support archive/unarchive access modes."""
+        if mode not in ("archive", "unarchive"):
+            return super()._get_allowed_models(mode)
+
+        group_ids = self.env.user._get_group_ids()
+        return self._get_archive_allowed_models_with_groups(mode, group_ids)
 
     @api.model
     def get_archive_access(self, model):
