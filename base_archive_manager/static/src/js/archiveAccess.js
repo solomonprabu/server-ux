@@ -3,9 +3,8 @@
  * License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
  */
 
-import { rpc } from "@web/core/network/rpc";
-import { Cache } from "@web/core/utils/cache";
-
+import {rpc} from "@web/core/network/rpc";
+import {Cache} from "@web/core/utils/cache";
 
 async function fetchArchiveAccess(resModel) {
     const result = await rpc("/web/dataset/call_kw", {

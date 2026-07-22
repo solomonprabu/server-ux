@@ -1,6 +1,6 @@
-=======================================
-Manage model archive/unarchive accesses
-=======================================
+===============
+Archive Manager
+===============
 
 .. 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -87,7 +87,7 @@ Contributors
 ------------
 
 - CIT Services https://www.cit-services.eu
-- Solomon Prabu sprabu@cit-services.eu
+- Solomon Prabu s.prabu@cit-services.eu
 
 Maintainers
 -----------

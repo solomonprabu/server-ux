@@ -3,20 +3,21 @@
  * License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
  */
 
-import { FormController } from "@web/views/form/form_controller";
-import { archiveAccessCache } from "@base_archive_manager/js/archiveAccess";
-import { patch } from "@web/core/utils/patch";
-import { onWillStart } from "@odoo/owl";
+import {FormController} from "@web/views/form/form_controller";
+import {archiveAccessCache} from "@base_archive_manager/js/archiveAccess";
+import {patch} from "@web/core/utils/patch";
+import {onWillStart} from "@odoo/owl";
 
 export const getArchiveAccessPatch = () => ({
     setup() {
         super.setup(...arguments);
         this.hasArchiveAccess = false;
         this.hasUnarchiveAccess = false;
-        
+
         onWillStart(async () => {
             // Only fetch access rights if the model supports archiving
-            const hasActiveField = "active" in this.props.fields || "x_active" in this.props.fields;
+            const hasActiveField =
+                "active" in this.props.fields || "x_active" in this.props.fields;
             if (hasActiveField) {
                 const access = await archiveAccessCache.read(this.props.resModel);
                 this.hasArchiveAccess = access.can_archive;
@@ -27,14 +28,15 @@ export const getArchiveAccessPatch = () => ({
 
     getStaticActionMenuItems() {
         const menuItems = super.getStaticActionMenuItems(...arguments);
-        
+
         const applyAccessCheck = (menuItem, hasAccess) => {
             if (!menuItem) return;
             const originalIsAvailable = menuItem.isAvailable;
             menuItem.isAvailable = () => {
-                const isAvailable = typeof originalIsAvailable === "function" 
-                    ? originalIsAvailable() 
-                    : (originalIsAvailable ?? true);
+                const isAvailable =
+                    typeof originalIsAvailable === "function"
+                        ? originalIsAvailable()
+                        : (originalIsAvailable ?? true);
                 return isAvailable && hasAccess;
             };
         };
@@ -43,7 +45,7 @@ export const getArchiveAccessPatch = () => ({
         applyAccessCheck(menuItems.unarchive, this.hasUnarchiveAccess);
 
         return menuItems;
-    }
+    },
 });
 
 patch(FormController.prototype, getArchiveAccessPatch());

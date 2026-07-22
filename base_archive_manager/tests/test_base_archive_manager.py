@@ -1,13 +1,15 @@
 # Copyright 2026 CIT Services
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
+from unittest.mock import patch
+
 from lxml import etree
 
-from odoo.tests.common import TransactionCase
 from odoo import Command
+from odoo.tests.common import TransactionCase
+
 
 class TestBaseArchiveManager(TransactionCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -15,7 +17,9 @@ class TestBaseArchiveManager(TransactionCase):
         cls.Partner = cls.env["res.partner"]
 
         # Create groups
-        cls.group_no_access = cls.env["res.groups"].create({"name": "No Archive Access"})
+        cls.group_no_access = cls.env["res.groups"].create(
+            {"name": "No Archive Access"}
+        )
         cls.group_archive_only = cls.env["res.groups"].create(
             {"name": "Archive Only Access"}
         )
@@ -30,10 +34,12 @@ class TestBaseArchiveManager(TransactionCase):
 
         # Clear existing access rights to avoid interference from default permissions
         existing_access = cls.ModelAccess.search([("model_id", "=", partner_model.id)])
-        existing_access.write({
-            "perm_archive": False,
-            "perm_unarchive": False,
-        })
+        existing_access.write(
+            {
+                "perm_archive": False,
+                "perm_unarchive": False,
+            }
+        )
 
         # Create access rights for res.partner
         cls.ModelAccess.create(
@@ -89,46 +95,70 @@ class TestBaseArchiveManager(TransactionCase):
             {
                 "name": "User No Access",
                 "login": "user_no_access",
-                "groups_id": [Command.set([cls.group_no_access.id, cls.env.ref("base.group_user").id])],
+                "groups_id": [
+                    Command.set(
+                        [cls.group_no_access.id, cls.env.ref("base.group_user").id]
+                    )
+                ],
             }
         )
         cls.user_archive_only = cls.env["res.users"].create(
             {
                 "name": "User Archive Only",
                 "login": "user_archive_only",
-                "groups_id": [Command.set([cls.group_archive_only.id, cls.env.ref("base.group_user").id])],
+                "groups_id": [
+                    Command.set(
+                        [cls.group_archive_only.id, cls.env.ref("base.group_user").id]
+                    )
+                ],
             }
         )
         cls.user_unarchive_only = cls.env["res.users"].create(
             {
                 "name": "User Unarchive Only",
                 "login": "user_unarchive_only",
-                "groups_id": [Command.set([cls.group_unarchive_only.id, cls.env.ref("base.group_user").id])],
+                "groups_id": [
+                    Command.set(
+                        [cls.group_unarchive_only.id, cls.env.ref("base.group_user").id]
+                    )
+                ],
             }
         )
         cls.user_full_access = cls.env["res.users"].create(
             {
                 "name": "User Full Access",
                 "login": "user_full_access",
-                "groups_id": [Command.set([cls.group_full_access.id, cls.env.ref("base.group_user").id])],
+                "groups_id": [
+                    Command.set(
+                        [cls.group_full_access.id, cls.env.ref("base.group_user").id]
+                    )
+                ],
             }
         )
 
     def test_get_archive_access(self):
         """Test the get_archive_access RPC method for all users."""
-        res = self.ModelAccess.with_user(self.user_no_access).get_archive_access("res.partner")
+        res = self.ModelAccess.with_user(self.user_no_access).get_archive_access(
+            "res.partner"
+        )
         self.assertFalse(res["can_archive"])
         self.assertFalse(res["can_unarchive"])
 
-        res = self.ModelAccess.with_user(self.user_archive_only).get_archive_access("res.partner")
+        res = self.ModelAccess.with_user(self.user_archive_only).get_archive_access(
+            "res.partner"
+        )
         self.assertTrue(res["can_archive"])
         self.assertFalse(res["can_unarchive"])
 
-        res = self.ModelAccess.with_user(self.user_unarchive_only).get_archive_access("res.partner")
+        res = self.ModelAccess.with_user(self.user_unarchive_only).get_archive_access(
+            "res.partner"
+        )
         self.assertFalse(res["can_archive"])
         self.assertTrue(res["can_unarchive"])
 
-        res = self.ModelAccess.with_user(self.user_full_access).get_archive_access("res.partner")
+        res = self.ModelAccess.with_user(self.user_full_access).get_archive_access(
+            "res.partner"
+        )
         self.assertTrue(res["can_archive"])
         self.assertTrue(res["can_unarchive"])
 
@@ -141,18 +171,24 @@ class TestBaseArchiveManager(TransactionCase):
             res = self.Partner.with_user(user).get_views(views=views)
             arch = res["views"]["form"]["arch"]
             doc = etree.fromstring(arch)
-            elements = doc.xpath("//button[@name='toggle_active']") + doc.xpath("//field[@name='active']")
+            elements = doc.xpath("//button[@name='toggle_active']") + doc.xpath(
+                "//field[@name='active']"
+            )
             return elements, arch
 
         # 1. No access -> Should inject True
         elements_no, arch_no = get_elements(self.user_no_access)
         if elements_no:
-            self.assertTrue(any("True" in el.get("invisible", "") for el in elements_no))
+            self.assertTrue(
+                any("True" in el.get("invisible", "") for el in elements_no)
+            )
 
         # 2. Archive only -> Should inject not active
         elements_ao, arch_ao = get_elements(self.user_archive_only)
         if elements_ao:
-            self.assertTrue(any("not active" in el.get("invisible", "") for el in elements_ao))
+            self.assertTrue(
+                any("not active" in el.get("invisible", "") for el in elements_ao)
+            )
 
         # 3. Unarchive only -> Should inject active
         elements_uo, arch_uo = get_elements(self.user_unarchive_only)
@@ -171,3 +207,33 @@ class TestBaseArchiveManager(TransactionCase):
             self.assertNotEqual(arch_fa, arch_ao)
             self.assertNotEqual(arch_fa, arch_uo)
 
+    def test_context_passed_to_get_group_ids(self):
+        """Test that get_archive_access passes role=True context to _get_group_ids."""
+        self.ModelAccess.clear_caches()
+
+        user_class = type(self.env["res.users"])
+        with patch.object(
+            user_class, "_get_group_ids", autospec=True
+        ) as mock_get_groups:
+            mock_get_groups.return_value = [
+                self.group_archive_only.id,
+                self.env.ref("base.group_user").id,
+            ]
+
+            self.ModelAccess.with_user(self.user_archive_only).get_archive_access(
+                "res.partner"
+            )
+
+            self.assertTrue(mock_get_groups.called)
+
+            role_context_found = False
+            for call in mock_get_groups.call_args_list:
+                args, kwargs = call
+                user = args[0]
+                if user.env.context.get("role") is True:
+                    role_context_found = True
+                    break
+            self.assertTrue(
+                role_context_found,
+                "Expected _get_group_ids to be called with role=True in context",
+            )
