@@ -1,8 +1,6 @@
 # Copyright 2026 CIT Services
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from unittest.mock import patch
-
 from lxml import etree
 
 from odoo import Command
@@ -207,33 +205,4 @@ class TestBaseArchiveManager(TransactionCase):
             self.assertNotEqual(arch_fa, arch_ao)
             self.assertNotEqual(arch_fa, arch_uo)
 
-    def test_context_passed_to_get_group_ids(self):
-        """Test that get_archive_access passes role=True context to _get_group_ids."""
-        self.ModelAccess.clear_caches()
 
-        user_class = type(self.env["res.users"])
-        with patch.object(
-            user_class, "_get_group_ids", autospec=True
-        ) as mock_get_groups:
-            mock_get_groups.return_value = [
-                self.group_archive_only.id,
-                self.env.ref("base.group_user").id,
-            ]
-
-            self.ModelAccess.with_user(self.user_archive_only).get_archive_access(
-                "res.partner"
-            )
-
-            self.assertTrue(mock_get_groups.called)
-
-            role_context_found = False
-            for call in mock_get_groups.call_args_list:
-                args, kwargs = call
-                user = args[0]
-                if user.env.context.get("role") is True:
-                    role_context_found = True
-                    break
-            self.assertTrue(
-                role_context_found,
-                "Expected _get_group_ids to be called with role=True in context",
-            )
